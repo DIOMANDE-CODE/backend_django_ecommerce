@@ -14,6 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import os
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -152,3 +153,23 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(hours=1),
 }
+
+# Configuation SMTP pour envoyer des emails
+# Email par défaut
+DEFAULT_FROM_EMAIL = 'chezpyth@gmail.com'
+
+# Choisir le backend selon l'environnement
+if os.environ.get('DJANGO_DEBUG', 'True') == 'True':
+    # Développement : afficher les emails dans la console
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # Production : envoyer via SMTP
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'         # SMTP du fournisseur
+    EMAIL_PORT = 587                       # Port TLS
+    EMAIL_USE_TLS = True                   # Sécurisé
+    EMAIL_HOST_USER = os.environ.get('EMAIL_USER')        # Email réel
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+
+# Lien de la page pour renitialiser le mot de passe
+RESET_PAGE = os.environ.get('RESET_PAGE','http://127.0.0.1:8000')

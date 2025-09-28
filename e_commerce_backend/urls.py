@@ -25,6 +25,8 @@ urlpatterns = [
     path('users/', include('utilisateurs.urls')),
     path('auth/', include('authentification.urls')),
     path('', acceuil, name='acceuil'),
+
+    
 ]
 
 if settings.DEBUG == True :

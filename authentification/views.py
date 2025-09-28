@@ -5,7 +5,13 @@ from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.http import JsonResponse
+from utilisateurs.models import Utilisateur
+from django.conf import settings
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.core.validators import validate_email
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from django.utils.encoding import force_bytes, force_str
 
 # Create your views here.
 
@@ -89,7 +95,91 @@ def deconnexion_utilisateur(request):
         return Response({
             "message_success":"Vous êtes deconnecté"
         }, status=status.HTTP_200_OK)
-    except Exception:
+    except Exception as e:
         return Response({
             "message_erreur":"Erreur de deconnexion"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+# Implémentation de la fonctionnalité de rénitialisation de mot de passe
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def renitialisation_password(request):
+    
+    # Recupérer l'adresse email de l'utilisateur
+    user_email = request.data.get("email")
+
+    # Verifier que email n'est pas vide
+    if not user_email :
+        return Response({
+            "message_erreur":"Le champs email est obligatoire"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Verifier la validatité du mail
+    try :
+        validate_email(user_email)
+    except Exception:
+        return Response({
+            "message_erreur":"email invalide"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    # Verifier que l'utilisateur existe
+    if not Utilisateur.objects.filter(email=user_email).exists():
+        return Response({
+            "message_erreur":"Compte inexistant"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Renitialisation du mot de passe
+    try :
+        user = Utilisateur.objects.get(email=user_email)
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        reset_url = f"{settings.RESET_PAGE}/auth/password-reset-confirm/{uid}/{token}/"
+
+        send_mail(
+        subject="Renitialisation de mot de passe",
+        message=f"Renitialiser votre mot de passe {reset_url}",
+        from_email= settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user_email]
+    )
+        return Response({
+                "message_success":"Veuillez consulter votre email pour rénitialiser "
+            }, status=status.HTTP_200_OK)
+    except Exception as e:
+        print(e)
+        return Response({
+            "message_erreur":"Une erreur interne est survenue. Veuillez ressayer plus tard."
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def changement_du_password(request, uid, token):
+    # Recupération le nouveau mot de passe
+    new_password = request.data.get("new_password")
+
+    # Verifier que le champs email est vide
+    if not new_password:
+        return Response({"message_erreur":"Le champs new_password est obligatoire"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Décoder l’uid
+        uid_decoded = force_str(urlsafe_base64_decode(uid))
+        user = Utilisateur.objects.get(pk=uid_decoded)
+
+        # Vérifier le token
+        if not default_token_generator.check_token(user, token):
+            return Response({"message_erreur":"Token invalide ou expiré"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Appliquer le nouveau mot de passe
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message_success":"Mot de passe réinitialisé avec succès"}, status=status.HTTP_200_OK)
+
+    except Utilisateur.DoesNotExist:
+        return Response({"message_erreur":"Utilisateur introuvable"}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        print("Erreur changement password:", e)
+        return Response({"message_erreur":"Erreur interne, veuillez réessayer"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
