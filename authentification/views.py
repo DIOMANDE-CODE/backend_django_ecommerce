@@ -15,6 +15,10 @@ from django.utils.encoding import force_bytes, force_str
 from google.oauth2 import id_token
 from google.auth.transport import requests
 
+# Twillio import
+from twilio.rest import Client
+from .models import OTP
+
 # Create your views here.
 
 
@@ -46,8 +50,8 @@ def connexion_utilisateur(request):
         return Response({
             "message_erreur":"Ce compte est introuvable"
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-    
+
+
     # Authentification du compte
     if not user.check_password(password):
         return Response({
@@ -243,3 +247,67 @@ def connexion_avec_googleAPI(request):
         return Response({
             "message_erreur":"Erreur interne, veuillez réessayer"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+# Envoi du code OTP
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def envoyer_otp(request):
+
+    # Recupération du numéro de téléphone
+    numero = request.data.get('numero_telephone')
+
+    if not numero:
+        return Response({
+            "message_erreur":"Le numéro de téléphone est obligatoire"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Génération de l'OTP
+    from random import randint
+    code = str(randint(100000,999999))
+
+    # Envoi de sms avec Twilio
+    try :
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        message = client.messages.create(
+            body = f"Votre code de vérification est : {code}",
+            from_ = settings.TWILIO_PHONE_NUMBER,
+            to=numero
+        )
+        OTP.objects.create(numero_telephone=numero, code_otp=code)
+        return Response({
+            "Message_success":"Code envoyé par SMS"
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"message_erreur": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# Verfication du code OTP
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verifier_otp(request):
+
+    # Recupération du numero et de l'otp
+    numero = request.data.get("numero_telephone")
+    code = request.data.get("code_otp")
+
+    if not numero and not code :
+        return Response({
+            "message_erreur":"Code et numéro de téléphone réquis"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Recupération de l'otp existant
+    try :
+        otp = OTP.objects.filter(numero_telephone=numero, est_verifie=False).latest('date_envoi')
+    except OTP.DoesNotExist:
+        return Response({
+            "message_erreur":"Aucun code trouvé pour ce numéro."
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Vérification de l'OTP
+    if otp.code_otp == code :
+        otp.est_verifie = True
+        otp.save()
+        return Response({"message": "Numéro vérifié avec succès."}, status=status.HTTP_200_OK)
+    else:
+        return Response({"error": "Code OTP invalide."}, status=status.HTTP_400_BAD_REQUEST)

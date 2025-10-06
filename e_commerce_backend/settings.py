@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -44,6 +46,8 @@ INSTALLED_APPS = [
     'rest_framework',
     # Ajout de l'app utilisateurs
     'utilisateurs',
+    # Ajout de l'app authentification,
+    'authentification',
     # Ajout de JWT
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
@@ -177,3 +181,8 @@ RESET_PAGE = os.environ.get('RESET_PAGE','http://127.0.0.1:8000')
 # Google Oauth Configuration
 CLIENT_ID_GOOGLE = os.environ.get('CLIENT_ID_GOOGLE')
 SECRET_ID_GOOGLE = os.environ.get('SECRET_ID_GOOGLE')
+
+# Twilio configuration
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER")
