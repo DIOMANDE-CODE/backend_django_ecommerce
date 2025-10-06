@@ -59,9 +59,9 @@ class Utilisateur(AbstractBaseUser, PermissionsMixin):
     
     # Creation des attributs de la tables utilisateur
     email = models.EmailField(unique=True, verbose_name="Adresse Email")
-    nom_utilisateur = models.CharField(max_length=50, verbose_name="Nom")
-    prenoms_utilisateur = models.CharField(max_length=200, verbose_name="Prenoms")
-    numero_tel_utilisateur = models.CharField(max_length=30, verbose_name="Numero de téléphone", validators=[verification_numero_tel])
+    nom_utilisateur = models.CharField(max_length=50, verbose_name="Nom", blank=True, null=True)
+    prenoms_utilisateur = models.CharField(max_length=200, verbose_name="Prenoms", blank=True, null=True)
+    numero_tel_utilisateur = models.CharField(max_length=30, verbose_name="Numero de téléphone", validators=[verification_numero_tel], blank=True, null=True)
     photo_utilisateur = models.ImageField(upload_to='photo_profil_utilisateur/', default=photo_profil_par_defaut, blank=True, null=True, verbose_name="Photo de profil")
     est_client = models.BooleanField(default=True)
     est_vendeur = models.BooleanField(default=False)

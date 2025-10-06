@@ -73,3 +73,62 @@ def creation_utilisateur(request):
         return Response({
             "message_erreur":"Une erreur interne est survenue. Veuillez ressayer plus tard."
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Fonction pour accéder, modifer, supprimer l'utilisateur
+@api_view(['GET','PUT','DELETE'])
+def detail_utilsateur(request):
+
+    # recupération de l'utilisateur connecté
+    try :
+        utilisateur = Utilisateur.objects.get(email=request.user)
+    except Exception:
+        return Response({
+            "message_erreur":"Cet utilisateur n'existe pas."
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # HTTP GET
+    if request.method == 'GET':
+        try:
+            serializer = UtilisateurSerializer(utilisateur)
+            return Response({
+                "message_success":serializer.data
+            }, status=status.HTTP_200_OK)
+        except Exception :
+            return Response({
+                "message_erreur":serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception :
+            return Response({
+                "message_erreur":"Une erreur interne est surevenue. Veuillez ressayer plus tard"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    # HTTP DELETE
+    if request.method == 'DELETE':
+        try :
+            utilisateur.delete()
+            return Response({
+                "message_success":"Utilisateur supprimé"
+            }, status=status.HTTP_200_OK)
+        except Exception:
+            return Response({
+                "message_erreur":"Une erreur interne est surevenue. Veuillez ressayer plus tard"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    # HTTP PUT
+    if request.method == 'PUT':
+        try :
+            serializer = UtilisateurSerializer(utilisateur,request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    "message_success":"Utilisateur modifié avec succès"
+                }, status=status.HTTP_200_OK)
+            print(serializer.errors)
+            return Response({
+                "message_erreur":serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({
+                "message_erreur":"Une erreur interne est surevenue. Veuillez ressayer plus tard"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
