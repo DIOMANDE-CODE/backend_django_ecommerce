@@ -23,28 +23,37 @@ from google.auth.transport import requests
 @permission_classes([AllowAny])
 def connexion_utilisateur(request):
     # Récupération des données
-    email = request.data.get('email')
+    identifiant = request.data.get('identifiant')
     password = request.data.get('password')
 
-    # Vérifier que les champs sont vides
-    if not email :
+    # Verification de la presence des données
+    if identifiant is None:
         return Response({
-            "message_erreur":"champs email obligatoire"
+            "message_erreur":"Email ou numéro de téléphone obligatoire"
         }, status=status.HTTP_400_BAD_REQUEST)
-    if not password :
+    if password is None:
         return Response({
-            "message_erreur":"champs mot de passe obligatoire"
+            "message_erreur":"Saisissez votre mot de passe"
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Vérifier que le compte existe
+    try :
+        if '@' in str(identifiant):
+            user = Utilisateur.objects.get(email=identifiant)
+        else :
+            user = Utilisateur.objects.get(numero_tel_utilisateur=identifiant)
+    except Utilisateur.DoesNotExist:
+        return Response({
+            "message_erreur":"Ce compte est introuvable"
         }, status=status.HTTP_400_BAD_REQUEST)
     
     
     # Authentification du compte
+    if not user.check_password(password):
+        return Response({
+            "message_erreur":"Mot de passe incorrecte"
+        }, status=status.HTTP_400_BAD_REQUEST)
     try :
-        user = authenticate(username=email, password=password)
-
-        if not user :
-            return Response({
-                "message_erreur":"Email ou mot de passe incorrecte"
-            }, status=status.HTTP_401_UNAUTHORIZED)
         
         if user.is_active == False :
             return Response({
