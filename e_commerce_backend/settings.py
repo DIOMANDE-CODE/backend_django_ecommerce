@@ -173,3 +173,7 @@ else:
 
 # Lien de la page pour renitialiser le mot de passe
 RESET_PAGE = os.environ.get('RESET_PAGE','http://127.0.0.1:8000')
+
+# Google Oauth Configuration
+CLIENT_ID_GOOGLE = os.environ.get('CLIENT_ID_GOOGLE')
+SECRET_ID_GOOGLE = os.environ.get('SECRET_ID_GOOGLE')

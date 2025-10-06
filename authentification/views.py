@@ -12,6 +12,8 @@ from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.encoding import force_bytes, force_str
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 # Create your views here.
 
@@ -183,3 +185,52 @@ def changement_du_password(request, uid, token):
     except Exception as e:
         print("Erreur changement password:", e)
         return Response({"message_erreur":"Erreur interne, veuillez réessayer"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+
+# Authentification avec GOOGLE OAUTH 2
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def connexion_avec_googleAPI(request):
+
+    # Verification de l'existence du Token
+    token = request.data.get('token')
+    if not token:
+        return Response({
+            "message_erreur":"Token manquant"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Creation de l'utilisateur par le token de google
+    try :
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), settings.CLIENT_ID_GOOGLE)
+        email = idinfo.get("email")
+        nom = idinfo.get("name")
+        image = idinfo.get("picture")
+
+        user,created = Utilisateur.objects.get_or_create(
+            email=email,
+            defaults={
+                "photo_utilisateur":image,
+                "nom_utilisateur":nom.split()[-1],
+                "prenoms_utilisateur":" ".join(nom.split()[:-1]),
+                "provider":"google"
+            }
+        )
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "email": user.email,
+            "nom": user.nom_utilisateur,
+            "prenoms": user.prenoms_utilisateur,
+            "photo_profil": image,
+            "nouvel_utilisateur": created
+        })
+    except Exception:
+        return Response({
+            "message_erreur":"Token Invalide"
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception :
+        return Response({
+            "message_erreur":"Erreur interne, veuillez réessayer"
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

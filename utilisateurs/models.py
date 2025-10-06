@@ -65,6 +65,7 @@ class Utilisateur(AbstractBaseUser, PermissionsMixin):
     photo_utilisateur = models.ImageField(upload_to='photo_profil_utilisateur/', default=photo_profil_par_defaut, blank=True, null=True, verbose_name="Photo de profil")
     est_client = models.BooleanField(default=True)
     est_vendeur = models.BooleanField(default=False)
+    provider = models.CharField(max_length=50,default='local')
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
